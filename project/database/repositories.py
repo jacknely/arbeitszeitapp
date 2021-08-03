@@ -110,6 +110,7 @@ class CompanyRepository:
         product_account_orm = company_orm.accounts.filter_by(account_type="prd").first()
         return entities.Company(
             id=company_orm.id,
+            name=company_orm.name,
             means_account=self.account_repository.object_from_orm(means_account_orm),
             raw_material_account=self.account_repository.object_from_orm(
                 raw_material_account_orm
@@ -163,6 +164,24 @@ class AccountRepository(repositories.AccountRepository):
         db.session.add(account)
         db.session.commit()
         return self.object_from_orm(account)
+
+
+@inject
+@dataclass
+class AccountOwnerRepository(repositories.AccountOwnerRepository):
+    account_repository: AccountRepository
+    member_repository: MemberRepository
+    company_repository: CompanyRepository
+
+    def get_member_for_account(self, account: entities.Account) -> entities.Member:
+        account_orm = self.account_repository.object_to_orm(account)
+        member_orm = account_orm.member
+        return self.member_repository.object_from_orm(member_orm)
+
+    def get_company_for_account(self, account: entities.Account) -> entities.Company:
+        account_orm = self.account_repository.object_to_orm(account)
+        company_orm = account_orm.company
+        return self.company_repository.object_from_orm(company_orm)
 
 
 @inject
@@ -351,7 +370,11 @@ class PlanRepository(repositories.PlanRepository):
         db.session.add(self.object_to_orm(plan))
 
 
+@inject
+@dataclass
 class TransactionRepository(repositories.TransactionRepository):
+    account_repository: AccountRepository
+
     def object_to_orm(self, transaction: entities.Transaction) -> Transaction:
         return Transaction(
             date=datetime.now(),
@@ -361,5 +384,36 @@ class TransactionRepository(repositories.TransactionRepository):
             purpose=transaction.purpose,
         )
 
+    def object_from_orm(self, transaction: Transaction) -> entities.Transaction:
+        return entities.Transaction(
+            date=transaction.date,
+            account_from=self.account_repository.object_from_orm(
+                transaction.sending_account
+            ),
+            account_to=self.account_repository.object_from_orm(
+                transaction.receiving_account
+            ),
+            amount=Decimal(transaction.amount),
+            purpose=transaction.purpose,
+        )
+
     def add(self, transaction: entities.Transaction) -> None:
         db.session.add(self.object_to_orm(transaction))
+
+    def all_transactions_sent_by_account(
+        self, account: entities.Account
+    ) -> Iterator[entities.Transaction]:
+        account_orm = self.account_repository.object_to_orm(account)
+        return [
+            self.object_from_orm(transaction)
+            for transaction in account_orm.transactions_sent.all()
+        ]
+
+    def all_transactions_received_by_account(
+        self, account: entities.Account
+    ) -> Iterator[entities.Transaction]:
+        account_orm = self.account_repository.object_to_orm(account)
+        return [
+            self.object_from_orm(transaction)
+            for transaction in account_orm.transactions_received.all()
+        ]

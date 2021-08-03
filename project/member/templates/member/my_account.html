@@ -25,9 +25,9 @@
         <thead>
             <tr>
                 <th>Datum</th>
-                <th>Sender</th>
-                <th>Empfänger</th>
-                <th>Ein-/Ausgänge</th>
+                <th>Von</th>
+                <th>An</th>
+                <th>Wert</th>
                 <th>Verw.zweck</th>
             </tr>
         </thead>
@@ -42,14 +42,16 @@
             </tr>
             {% endif %}
 
-            {% if all_transactions is defined and all_transactions|length %}
-            {% for transaction in all_transactions %}
+            {% if all_transactions_info is defined and all_transactions_info|length %}
+            {% for trans_info in all_transactions_info %}
             <tr>
-                <td>{{ transaction[0].strftime("%c") }}</td>
-                <td>{{ transaction[1] }}</td>
-                <td>{{ transaction[2] }}</td>
-                <td>{{ transaction[3] }}</td>
-                <td>{{ transaction[4] }}</td>
+                <td>{{ trans_info["transaction"].date.strftime("%c") }}</td>
+                <td>{{ trans_info["sender"].name if trans_info["user_role"] == "receiver" else "Mir" }}</td>
+                <td>{{ trans_info["receiver"].name if trans_info["user_role"] == "sender" else "Mich" }}</td>
+                <td>{{ trans_info["transaction"].amount if trans_info["user_role"] == "receiver" else
+                    -trans_info["transaction"].amount
+                    }}</td>
+                <td>{{ trans_info["transaction"].purpose }}</td>
             </tr>
             {% endfor %}
             {% endif %}
