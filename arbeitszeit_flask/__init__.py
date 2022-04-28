@@ -34,7 +34,10 @@ def create_app(config=None, db=None, migrate=None, template_folder=None):
 
     # Init Flask-Talisman
     if app.config["ENV"] == "production":
-        csp = {"default-src": ["'self'", "'unsafe-inline'", "*.fontawesome.com"]}
+        csp = {
+            "default-src": ["'self'", "'unsafe-inline'", "*.fontawesome.com"],
+            "img-src": "data:",
+        }
         Talisman(app, content_security_policy=csp)
 
     # init flask extensions
